@@ -40,8 +40,11 @@ df["LongMA"] = df["Close"].rolling(long_window).mean()
 df["Signal"] = 0
 df["Signal"][short_window:] = (df["ShortMA"][short_window:] > df["LongMA"][short_window:]).astype(int)
 df["Position"] = df["Signal"].diff()
-df["Strategy"] = df["Signal"].shift(1) * df["Close"].pct_change()
+df["Return"] = df["Close"].pct_change()
+df["Strategy"] = df["Signal"].shift(1) * df["Return"]
+df.dropna(subset=["Strategy"], inplace=True)
 df["Equity"] = (1 + df["Strategy"]).cumprod()
+
 
 # Charts
 st.subheader("📊 Price Chart with Signals")
