@@ -35,49 +35,51 @@ with col5:
 
 # Load data
 df = yf.download(ticker, start=start, end=end)
-df["ShortMA"] = df["Close"].rolling(short_window).mean()
-df["LongMA"] = df["Close"].rolling(long_window).mean()
-df["Signal"] = 0
-df["Signal"][short_window:] = (df["ShortMA"][short_window:] > df["LongMA"][short_window:]).astype(int)
-df["Position"] = df["Signal"].diff()
-df["Return"] = df["Close"].pct_change()
-df["Strategy"] = df["Signal"].shift(1) * df["Return"]
-df.dropna(subset=["Strategy"], inplace=True)
-df["Equity"] = (1 + df["Strategy"]).cumprod()
 
+if not df.empty:
+    df["ShortMA"] = df["Close"].rolling(short_window).mean()
+    df["LongMA"] = df["Close"].rolling(long_window).mean()
+    df["Signal"] = 0
+    df.loc[short_window:, "Signal"] = (df["ShortMA"][short_window:] > df["LongMA"][short_window:]).astype(int)
+    df["Position"] = df["Signal"].diff()
+    df["Return"] = df["Close"].pct_change()
+    df["Strategy"] = df["Signal"].shift(1) * df["Return"]
+    df["Equity"] = (1 + df["Strategy"].fillna(0)).cumprod()
 
-# Charts
-st.subheader("📊 Price Chart with Signals")
-fig = go.Figure()
-fig.add_trace(go.Scatter(x=df.index, y=df["Close"], name="Price", line=dict(color='gray')))
-fig.add_trace(go.Scatter(x=df.index, y=df["ShortMA"], name=f"{short_window}-day MA", line=dict(color='blue')))
-fig.add_trace(go.Scatter(x=df.index, y=df["LongMA"], name=f"{long_window}-day MA", line=dict(color='orange')))
-fig.add_trace(go.Scatter(
-    x=df[df["Position"] == 1].index,
-    y=df["Close"][df["Position"] == 1],
-    mode="markers", name="Buy Signal",
-    marker=dict(symbol="triangle-up", size=10, color="green")))
-fig.add_trace(go.Scatter(
-    x=df[df["Position"] == -1].index,
-    y=df["Close"][df["Position"] == -1],
-    mode="markers", name="Sell Signal",
-    marker=dict(symbol="triangle-down", size=10, color="red")))
-fig.update_layout(height=500, margin=dict(t=10, b=10))
-st.plotly_chart(fig, use_container_width=True)
+    # Price chart with signals
+    st.subheader("📊 Price Chart with Signals")
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=df.index, y=df["Close"], name="Price", line=dict(color='gray')))
+    fig.add_trace(go.Scatter(x=df.index, y=df["ShortMA"], name=f"{short_window}-day MA", line=dict(color='blue')))
+    fig.add_trace(go.Scatter(x=df.index, y=df["LongMA"], name=f"{long_window}-day MA", line=dict(color='orange')))
+    fig.add_trace(go.Scatter(
+        x=df[df["Position"] == 1].index,
+        y=df["Close"][df["Position"] == 1],
+        mode="markers", name="Buy Signal",
+        marker=dict(symbol="triangle-up", size=10, color="green")))
+    fig.add_trace(go.Scatter(
+        x=df[df["Position"] == -1].index,
+        y=df["Close"][df["Position"] == -1],
+        mode="markers", name="Sell Signal",
+        marker=dict(symbol="triangle-down", size=10, color="red")))
+    fig.update_layout(height=500, margin=dict(t=10, b=10))
+    st.plotly_chart(fig, use_container_width=True)
 
-# Equity Curve
-st.subheader("📈 Strategy Equity Curve")
-fig_eq = go.Figure()
-fig_eq.add_trace(go.Scatter(x=df.index, y=df["Equity"], name="Equity Curve", line=dict(color='purple')))
-fig_eq.update_layout(height=400, margin=dict(t=10, b=10))
-st.plotly_chart(fig_eq, use_container_width=True)
+    # Equity Curve
+    st.subheader("📈 Strategy Equity Curve")
+    fig_eq = go.Figure()
+    fig_eq.add_trace(go.Scatter(x=df.index, y=df["Equity"], name="Equity Curve", line=dict(color='purple')))
+    fig_eq.update_layout(height=400, margin=dict(t=10, b=10))
+    st.plotly_chart(fig_eq, use_container_width=True)
 
-# Metrics
-st.subheader("📌 Strategy Performance Metrics")
-col_a, col_b, col_c = st.columns(3)
-with col_a:
-    st.metric("Total Return", f"{(df['Equity'].iloc[-1] - 1) * 100:.2f}%")
-with col_b:
-    st.metric("Number of Trades", int(df["Position"].abs().sum() / 2))
-with col_c:
-    st.metric("Holding Period Return", f"{df['Strategy'].mean() * 100:.4f}% per day")
+    # Metrics
+    st.subheader("📌 Strategy Performance Metrics")
+    col_a, col_b, col_c = st.columns(3)
+    with col_a:
+        st.metric("Total Return", f"{(df['Equity'].iloc[-1] - 1) * 100:.2f}%")
+    with col_b:
+        st.metric("Number of Trades", int(df["Position"].abs().sum() / 2))
+    with col_c:
+        st.metric("Holding Period Return", f"{df['Strategy'].mean() * 100:.4f}% per day")
+else:
+    st.warning("No data was loaded for the given ticker and date range.")
