@@ -40,7 +40,7 @@ if not df.empty:
     df["ShortMA"] = df["Close"].rolling(short_window).mean()
     df["LongMA"] = df["Close"].rolling(long_window).mean()
     df["Signal"] = 0
-    df.loc[short_window:, "Signal"] = (df["ShortMA"][short_window:] > df["LongMA"][short_window:]).astype(int)
+    df["Signal"].iloc[short_window:] = (df["ShortMA"].iloc[short_window:] > df["LongMA"].iloc[short_window:]).astype(int)
     df["Position"] = df["Signal"].diff()
     df["Return"] = df["Close"].pct_change()
     df["Strategy"] = df["Signal"].shift(1) * df["Return"]
